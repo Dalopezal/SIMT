@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIMT</title>
+<style>
+  :root{
+    --surface-page:#0a0a0c;
+    --surface-card:#1a1a19;
+    --surface-card-2:#1f1f1e;
+    --border: rgba(255,255,255,0.10);
+    --text-primary:#ffffff;
+    --text-secondary:#c3c2b7;
+    --text-muted:#898781;
+    --grid:#2c2c2a;
+    --baseline:#383835;
+
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+    --s5:#d55181; --s6:#37b937; --s7:#9085e9; --s8:#e66767;
+
+    --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#d03b3b;
+
+    --accent-grad: linear-gradient(135deg,#3987e5 0%, #9085e9 100%);
+    --radius:16px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'Segoe UI', system-ui, -apple-system, sans-serif;
+    background:
+      radial-gradient(900px 500px at 90% -10%, rgba(57,135,229,0.12), transparent 60%),
+      radial-gradient(800px 500px at -10% 100%, rgba(144,133,233,0.08), transparent 55%),
+      var(--surface-page);
+    color:var(--text-primary);
+    min-height:100vh;
+  }
+  a{color:inherit; text-decoration:none;}
+  ::-webkit-scrollbar{width:9px; height:9px;}
+  ::-webkit-scrollbar-thumb{background:#3a3a3a; border-radius:8px;}
+
+  .app{display:flex; min-height:100vh;}
+  .sidebar{
+    width:250px; flex-shrink:0; background:var(--surface-card);
+    border-right:1px solid var(--border); padding:22px 16px; position:sticky; top:0; height:100vh;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .side-brand{display:flex; align-items:center; gap:11px; padding:6px 8px 20px;}
+  .side-brand .logo{width:36px; height:36px; border-radius:10px; background:var(--accent-grad); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px;}
+  .side-brand .t1{font-size:14.5px; font-weight:800; letter-spacing:.3px;}
+  .side-brand .t2{font-size:10px; color:var(--text-muted); line-height:1.3;}
+  .side-label{font-size:10.5px; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); font-weight:700; padding:14px 10px 8px;}
+  .side-link{display:flex; align-items:center; gap:11px; padding:11px 12px; border-radius:11px; font-size:13.5px; font-weight:600; color:var(--text-secondary); cursor:pointer; transition:.18s;}
+  .side-link .ic{width:18px; text-align:center; font-size:15px;}
+  .side-link:hover{background:rgba(255,255,255,0.05); color:var(--text-primary);}
+  .side-link.active{background:linear-gradient(135deg, rgba(57,135,229,0.18), rgba(144,133,233,0.14)); color:#fff; border:1px solid rgba(144,133,233,0.3);}
+  .side-foot{margin-top:auto; padding:14px 10px; border-top:1px solid var(--border); font-size:11px; color:var(--text-muted); line-height:1.6;}
+  .reset-btn{display:inline-block; margin-top:8px; font-size:11px; font-weight:700; color:#ff9d9d; cursor:pointer;}
+
+  .main{flex:1; min-width:0;}
+  .topbar{position:sticky; top:0; z-index:20; display:flex; align-items:center; justify-content:space-between; padding:18px 30px; background:rgba(10,10,12,0.85); backdrop-filter:blur(10px); border-bottom:1px solid var(--border);}
+  .topbar h1{font-size:19px; font-weight:800;}
+  .topbar .sub{font-size:12px; color:var(--text-muted); margin-top:2px;}
+  .topbar-right{display:flex; align-items:center; gap:14px;}
+  .period-toggle{display:flex; background:var(--surface-card); border:1px solid var(--border); border-radius:100px; padding:3px;}
+  .period-btn{padding:6px 14px; border-radius:100px; font-size:12px; font-weight:700; color:var(--text-muted); cursor:pointer; transition:.18s;}
+  .period-btn.active{background:var(--accent-grad); color:#fff;}
+  .live-pill{display:flex; align-items:center; gap:6px; font-size:11px; font-weight:700; color:var(--good); background:rgba(12,163,12,0.12); padding:6px 12px; border-radius:100px;}
+  .live-pill .d{width:6px; height:6px; border-radius:50%; background:var(--good); animation:pulse 1.6s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.25;}}
+
+  .page{padding:26px 30px 60px; display:none;}
+  .page.active{display:block; animation:fadeIn .35s ease;}
+  @keyframes fadeIn{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);}}
+
+  .section-title{font-size:14.5px; font-weight:800; margin:34px 0 16px; display:flex; align-items:center; gap:10px;}
+  .section-title .line{flex:1; height:1px; background:var(--border);}
+
+  .stat-row{display:grid; grid-template-columns:repeat(4,1fr); gap:16px;}
+  .stat{background:var(--surface-card); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px; position:relative;}
+  .stat .top{display:flex; justify-content:space-between; align-items:center; gap:8px;}
+  .stat .lbl{font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:.3px;}
+  .stat-icons{display:flex; align-items:center; gap:7px; flex-shrink:0;}
+  .status-dot{width:9px; height:9px; border-radius:50%; flex-shrink:0;}
+  .dot-good{background:var(--good); box-shadow:0 0 8px var(--good);}
+  .dot-warning{background:var(--warning); box-shadow:0 0 8px var(--warning);}
+  .dot-critical{background:var(--critical); box-shadow:0 0 8px var(--critical);}
+  .stat .val{font-size:25px; font-weight:800; margin-top:9px;}
+  .stat .meta{font-size:11px; margin-top:6px; color:var(--text-muted); line-height:1.4;}
+  .manual-tag{font-size:9.5px; font-weight:700; color:#9ad9ff; background:rgba(57,135,229,0.15); padding:2px 6px; border-radius:100px;}
+
+  .edit-ic{cursor:pointer; font-size:12.5px; color:var(--text-muted); width:20px; height:20px; display:flex; align-items:center; justify-content:center; border-radius:6px; transition:.15s; flex-shrink:0;}
+  .edit-ic:hover{background:rgba(255,255,255,0.08); color:#9ad9ff;}
+  .edit-btn{display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; color:#9ad9ff; background:rgba(57,135,229,0.12); padding:6px 12px; border-radius:100px; cursor:pointer; transition:.15s; white-space:nowrap;}
+  .edit-btn:hover{background:rgba(57,135,229,0.22);}
+
+  .grid{display:grid; gap:18px;}
+  .grid-2{grid-template-columns:1.3fr 1fr;}
+  .grid-2b{grid-template-columns:1fr 1fr;}
+  .grid-3{grid-template-columns:repeat(3,1fr);}
+  .card{background:var(--surface-card); border:1px solid var(--border); border-radius:var(--radius); padding:22px;}
+  .card-head{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:16px; flex-wrap:wrap;}
+  .card-head h3{font-size:14.5px; font-weight:700; display:flex; align-items:center; gap:8px;}
+  .card-head .hint{font-size:11px; color:var(--text-muted); margin-top:3px;}
+  .card-head-right{display:flex; align-items:center; gap:8px;}
+  .badge-mini{font-size:10.5px; font-weight:700; padding:4px 10px; border-radius:100px; background:rgba(255,255,255,0.06); color:var(--text-secondary);}
+
+  .legend{display:flex; flex-wrap:wrap; gap:14px; margin-top:14px;}
+  .legend-item{display:flex; align-items:center; gap:7px; font-size:12px; color:var(--text-secondary);}
+  .legend-dot{width:9px; height:9px; border-radius:3px;}
+
+  svg{display:block; width:100%; height:auto; overflow:visible;}
+  svg text{fill:var(--text-muted); font-size:9.5px; font-family:inherit;}
+
+  table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  th{text-align:left; color:var(--text-muted); font-weight:700; font-size:10.5px; text-transform:uppercase; letter-spacing:.4px; padding:10px 12px; border-bottom:1px solid var(--border);}
+  td{padding:12px; border-bottom:1px solid var(--border); color:var(--text-secondary);}
+  td strong{color:var(--text-primary);}
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:rgba(255,255,255,0.025);}
+  .badge{padding:4px 11px; border-radius:100px; font-size:10.5px; font-weight:700; display:inline-flex; align-items:center; gap:6px;}
+  .badge.good{background:rgba(12,163,12,0.14); color:#4ce04c;}
+  .badge.warning{background:rgba(250,178,25,0.14); color:var(--warning);}
+  .badge.critical{background:rgba(208,59,59,0.16); color:#ff7373;}
+  .badge .d{width:6px; height:6px; border-radius:50%; background:currentColor;}
+  .bar-cell{display:flex; align-items:center; gap:8px; min-width:130px;}
+  .bar-track{flex:1; height:6px; background:rgba(255,255,255,0.07); border-radius:10px; overflow:hidden;}
+  .bar-fill{height:100%; border-radius:10px;}
+
+  .gauge-card{text-align:center;}
+
+  @media(max-width:1100px){
+    .grid-2, .grid-2b, .grid-3{grid-template-columns:1fr;}
+    .stat-row{grid-template-columns:repeat(2,1fr);}
+  }
+  @media(max-width:760px){
+    .sidebar{position:fixed; left:-260px; z-index:60; transition:.25s; box-shadow:0 0 40px rgba(0,0,0,0.6);}
+    .sidebar.open{left:0;}
+    .topbar{padding:16px 18px;}
+    .page{padding:20px 16px 50px;}
+    .stat-row{grid-template-columns:1fr 1fr;}
+    .menu-btn{display:flex !important;}
+  }
+  .menu-btn{display:none; align-items:center; justify-content:center; width:34px; height:34px; border-radius:9px; background:var(--surface-card-2); border:1px solid var(--border); cursor:pointer; font-size:16px;}
+
+  /* ===== Modal / editor ===== */
+  .modal-overlay{position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(3px); z-index:200; display:none; align-items:center; justify-content:center; padding:20px;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:var(--surface-card); border:1px solid var(--border); border-radius:18px; width:100%; max-width:640px; max-height:86vh; display:flex; flex-direction:column; box-shadow:0 30px 70px rgba(0,0,0,0.5);}
+  .modal-head{display:flex; justify-content:space-between; align-items:center; padding:18px 22px; border-bottom:1px solid var(--border);}
+  .modal-head h3{font-size:15px; font-weight:800;}
+  .modal-head .hint{font-size:11px; color:var(--text-muted); margin-top:2px; font-weight:400;}
+  .modal-close{cursor:pointer; font-size:15px; color:var(--text-muted); width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:8px;}
+  .modal-close:hover{background:rgba(255,255,255,0.08); color:#fff;}
+  .modal-body{padding:20px 22px; overflow-y:auto;}
+  .modal-foot{display:flex; justify-content:flex-end; gap:10px; padding:16px 22px; border-top:1px solid var(--border);}
+  .btn{padding:10px 20px; border-radius:100px; font-weight:700; font-size:13px; cursor:pointer; border:none;}
+  .btn-primary{background:var(--accent-grad); color:#fff;}
+  .btn-ghost{background:rgba(255,255,255,0.06); color:var(--text-primary); border:1px solid var(--border);}
+
+  .field-row{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;}
+  .field{display:flex; flex-direction:column; gap:6px;}
+  .field label{font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:.3px;}
+  .field input, .field select{
+    background:var(--surface-card-2); border:1px solid var(--border); border-radius:9px; color:var(--text-primary);
+    padding:9px 11px; font-size:13.5px; font-family:inherit;
+  }
+  .field input:focus, .field select:focus{outline:none; border-color:#3987e5;}
+  .field-note{font-size:11px; color:var(--text-muted); margin-top:-6px; margin-bottom:12px; line-height:1.5;}
+
+  .editor-table-wrap{overflow-x:auto;}
+  table.editor-table{font-size:12.5px;}
+  table.editor-table th{white-space:nowrap;}
+  table.editor-table td{padding:6px 8px;}
+  table.editor-table input, table.editor-table select{
+    width:100%; min-width:70px; background:var(--surface-card-2); border:1px solid var(--border); border-radius:7px;
+    color:var(--text-primary); padding:6px 8px; font-size:12.5px; font-family:inherit;
+  }
+  .row-del{cursor:pointer; color:#ff8a8a; font-size:13px; padding:4px 6px;}
+  .row-del:hover{color:#ff5555;}
+  .modal-actions-row{margin-top:12px;}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="side-brand">
+      <div class="logo">TI</div>
+      <div>
+        <div class="t1">SIMT</div>
+        <div class="t2">Sistema de Indicadores y Monitoreo Tecnológico</div>
+      </div>
+    </div>
+
+    <div class="side-label">Analítica</div>
+    <div class="side-link active" data-page="page-kpi"><span class="ic">📊</span> Indicadores clave</div>
+    <div class="side-link" data-page="page-infra"><span class="ic">☁️</span> Consumo y disponibilidad</div>
+
+    <div class="side-foot">
+      Prototipo navegable · Sin backend<br>
+      Toca ✎ en cualquier tarjeta, gráfica o tabla para ingresar datos manuales — el sistema recalcula el indicador al instante. Útil mientras se automatiza cada fuente.
+      <div class="reset-btn" onclick="resetAllData()">↺ Restaurar datos de ejemplo</div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div class="menu-btn" id="menuBtn">☰</div>
+        <div>
+          <h1 id="topTitle">Indicadores clave de transformación digital</h1>
+          <div class="sub" id="topSub">Lectura ejecutiva del avance digital · edite cualquier dato para recalcular</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="period-toggle">
+          <div class="period-btn" data-p="3">3M</div>
+          <div class="period-btn" data-p="6">6M</div>
+          <div class="period-btn active" data-p="12">12M</div>
+        </div>
+        <div class="live-pill"><span class="d"></span> Demo</div>
+      </div>
+    </div>
+
+    <!-- ================= PAGE 1: KPI ================= -->
+    <div class="page active" id="page-kpi">
+
+      <div class="stat-row" id="kpiStats"></div>
+
+      <div class="section-title"><span>Madurez digital y evolución</span><span class="line"></span></div>
+      <div class="grid grid-2">
+        <div class="card">
+          <div class="card-head">
+            <div><h3>Adopción de nube vs. automatización de procesos</h3><div class="hint">% acumulado — últimos <span id="trendPeriodLbl">12</span> meses</div></div>
+            <div class="card-head-right"><span class="badge-mini">Tendencia</span><span class="edit-btn" onclick="openTableEditor('trend')">✎ Datos</span></div>
+          </div>
+          <svg id="chartTrend" viewBox="0 0 640 260"></svg>
+          <div class="legend" id="legendTrend"></div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <div><h3>Índice de madurez digital</h3><div class="hint">Score por dimensión (0–100) — promedio calculado <span id="radarAvgBadge"></span></div></div>
+            <div class="card-head-right"><span class="edit-btn" onclick="openTableEditor('radar')">✎ Datos</span></div>
+          </div>
+          <svg id="chartRadar" viewBox="0 0 320 300"></svg>
+        </div>
+      </div>
+
+      <div class="section-title"><span>Gasto en TI e inversión digital</span><span class="line"></span></div>
+      <div class="grid grid-2b">
+        <div class="card">
+          <div class="card-head">
+            <div><h3>Gasto TI como % de ingresos — real vs. benchmark</h3><div class="hint">Comparado con entidades del sector público / Latam</div></div>
+            <div class="card-head-right"><span class="edit-btn" onclick="openTableEditor('benchmark')">✎ Datos</span></div>
+          </div>
+          <svg id="chartBenchmark" viewBox="0 0 560 240"></svg>
+          <div class="legend" id="legendBenchmark"></div>
+        </div>
+        <div class="card gauge-card">
+          <div class="card-head" style="justify-content:center; text-align:center; flex-direction:column;">
+            <h3 style="justify-content:center;">Postura de ciberseguridad</h3><div class="hint">Score compuesto (NIST-like), sobre 100</div>
+            <div class="card-head-right" style="margin-top:10px;"><span class="edit-btn" onclick="openGaugeEditor('security')">✎ Datos</span></div>
+          </div>
+          <svg id="gaugeSecurity" viewBox="0 0 220 130" style="max-width:260px; margin:0 auto;"></svg>
+        </div>
+      </div>
+
+      <div class="section-title"><span>Catálogo de indicadores clave</span><span class="line"></span></div>
+      <div class="card">
+        <div class="card-head"><div><h3>Indicadores</h3><div class="hint">Estado y tendencia calculados a partir del valor y la meta</div></div>
+          <div class="card-head-right"><span class="edit-btn" onclick="openTableEditor('kpiTable')">✎ Datos</span></div>
+        </div>
+        <table>
+          <thead><tr><th>Indicador</th><th>Valor actual</th><th>Meta</th><th>Tendencia</th><th>Estado</th></tr></thead>
+          <tbody id="kpiTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ================= PAGE 2: INFRA ================= -->
+    <div class="page" id="page-infra">
+
+      <div class="stat-row" id="infraStats"></div>
+
+      <div class="section-title"><span>Consumo en la nube</span><span class="line"></span></div>
+      <div class="grid grid-3">
+        <div class="card">
+          <div class="card-head"><div><h3>Microsoft Azure</h3><div class="hint">Distribución de costo mensual</div></div>
+            <div class="card-head-right"><span class="edit-btn" onclick="openTableEditor('azure')">✎ Datos</span></div>
+          </div>
+          <svg id="donutAzure" viewBox="0 0 220 220" style="max-width:220px; margin:0 auto;"></svg>
+          <div class="legend" id="legendAzure"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div><h3>Amazon Web Services</h3><div class="hint">Distribución de costo mensual</div></div>
+            <div class="card-head-right"><span class="edit-btn" onclick="openTableEditor('aws')">✎ Datos</span></div>
+          </div>
+          <svg id="donutAWS" viewBox="0 0 220 220" style="max-width:220px; margin:0 auto;"></svg>
+          <div class="legend" id="legendAWS"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div><h3>Azure vs. AWS</h3><div class="hint">Gasto mensual (USD), últimos <span id="cloudPeriodLbl">12</span> meses</div></div>
+            <div class="card-head-right"><span class="edit-btn" onclick="openTableEditor('cloudTrend')">✎ Datos</span></div>
+          </div>
+          <svg id="chartCloudTrend" viewBox="0 0 300 240"></svg>
+          <div class="legend" id="legendCloudTrend"></div>
+        </div>
+      </div>
+
+      <div class="section-title"><span>Disponibilidad de servicios tecnológicos</span><span class="line"></span></div>
+      <div class="card">
+        <div class="card-head"><div><h3>Servicios monitoreados</h3><div class="hint">Estado calculado comparando disponibilidad real vs. SLA objetivo</div></div>
+          <div class="card-head-right"><span class="edit-btn" onclick="openTableEditor('avail')">✎ Datos</span></div>
+        </div>
+        <table>
+          <thead><tr><th>Servicio</th><th>Proveedor</th><th>SLA objetivo</th><th>Disponibilidad real</th><th>Estado</th></tr></thead>
+          <tbody id="availTableBody"></tbody>
+        </table>
+      </div>
+
+      <div class="section-title"><span>Capacidad de bases de datos</span><span class="line"></span></div>
+      <div class="grid grid-2b">
+        <div class="card">
+          <div class="card-head"><div><h3>SQL Server</h3><div class="hint">Instancias en Azure SQL / on-premise</div></div>
+            <div class="card-head-right"><span class="badge-mini" id="sqlCount"></span><span class="edit-btn" onclick="openTableEditor('sql')">✎ Datos</span></div>
+          </div>
+          <table>
+            <thead><tr><th>Instancia</th><th>Almacenamiento</th><th>Carga</th><th>Estado</th></tr></thead>
+            <tbody id="sqlTableBody"></tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-head"><div><h3>MySQL</h3><div class="hint">Instancias en Azure Database / RDS</div></div>
+            <div class="card-head-right"><span class="badge-mini" id="mysqlCount"></span><span class="edit-btn" onclick="openTableEditor('mysql')">✎ Datos</span></div>
+          </div>
+          <table>
+            <thead><tr><th>Instancia</th><th>Almacenamiento</th><th>Conexiones</th><th>Estado</th></tr></thead>
+            <tbody id="mysqlTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="section-title"><span>Utilización promedio de recursos</span><span class="line"></span></div>
+      <div class="grid grid-3">
+        <div class="card gauge-card">
+          <div class="card-head" style="justify-content:center; flex-direction:column; text-align:center;"><h3 style="justify-content:center;">CPU</h3>
+            <div class="card-head-right" style="margin-top:8px;"><span class="edit-btn" onclick="openGaugeEditor('cpu')">✎ Datos</span></div>
+          </div>
+          <svg id="gaugeCPU" viewBox="0 0 220 130"></svg>
+        </div>
+        <div class="card gauge-card">
+          <div class="card-head" style="justify-content:center; flex-direction:column; text-align:center;"><h3 style="justify-content:center;">Memoria</h3>
+            <div class="card-head-right" style="margin-top:8px;"><span class="edit-btn" onclick="openGaugeEditor('mem')">✎ Datos</span></div>
+          </div>
+          <svg id="gaugeMem" viewBox="0 0 220 130"></svg>
+        </div>
+        <div class="card gauge-card">
+          <div class="card-head" style="justify-content:center; flex-direction:column; text-align:center;"><h3 style="justify-content:center;">Almacenamiento</h3>
+            <div class="card-head-right" style="margin-top:8px;"><span class="edit-btn" onclick="openGaugeEditor('storage')">✎ Datos</span></div>
+          </div>
+          <svg id="gaugeStorage" viewBox="0 0 220 130"></svg>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL ================= -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div><h3 id="modalTitle"></h3><div class="hint" id="modalHint"></div></div>
+      <div class="modal-close" onclick="closeModal()">✕</div>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveModal()">Guardar y calcular</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   DEFAULT DATA
+========================================================= */
+const MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+const DEFAULTS = {
+  kpiStats: [
+    {key:'madurez', label:'Índice de madurez digital', value:68, target:75, unit:'/100', direction:'higher'},
+    {key:'nube', label:'Adopción de nube', value:74, target:85, unit:'%', direction:'higher'},
+    {key:'automatiz', label:'Automatización de procesos', value:41, target:55, unit:'%', direction:'higher'},
+    {key:'disp', label:'Disponibilidad servicios críticos', value:99.2, target:99.5, unit:'%', direction:'higher'},
+    {key:'deuda', label:'Deuda técnica', value:23, target:20, unit:'%', direction:'lower'},
+    {key:'ciber', label:'Postura de ciberseguridad', value:82, target:80, unit:'/100', direction:'higher'},
+    {key:'datos', label:'Calidad de datos', value:77, target:85, unit:'%', direction:'higher'},
+    {key:'talento', label:'Talento digital capacitado', value:52, target:70, unit:'%', direction:'higher'},
+  ],
+  infraStats: [
+    {key:'gastoTotal', label:'Gasto cloud total / mes', value:47900, target:45000, unit:'$', direction:'lower'},
+    {key:'azureGasto', label:'Gasto Azure / mes', value:29600, target:28000, unit:'$', direction:'lower'},
+    {key:'awsGasto', label:'Gasto AWS / mes', value:18300, target:17000, unit:'$', direction:'lower'},
+    {key:'dispProm', label:'Disponibilidad promedio', value:98.7, target:99.5, unit:'%', direction:'higher'},
+    {key:'bdMonitor', label:'Bases de datos monitoreadas', value:7, target:7, unit:'', direction:'higher'},
+    {key:'alertas', label:'Alertas de capacidad activas', value:3, target:0, unit:'', direction:'lower'},
+    {key:'almacenTotal', label:'Almacenamiento total en uso', value:70, target:80, unit:'% de 9.2 TB', direction:'lower'},
+    {key:'instancias', label:'Instancias de cómputo activas', value:34, target:34, unit:'', direction:'higher'},
+  ],
+  radar: [
+    {label:'Estrategia', value:72},
+    {label:'Cultura y talento', value:58},
+    {label:'Procesos', value:65},
+    {label:'Tecnología', value:77},
+    {label:'Datos y analítica', value:61},
+    {label:'Experiencia digital', value:70},
+    {label:'Ciberseguridad', value:82},
+  ],
+  trend: MONTHS.map((m,i)=>({
+    label:m,
+    nube: [42,45,49,52,55,58,61,64,67,70,72,74][i],
+    automat: [19,21,24,26,29,31,33,35,37,38,40,41][i]
+  })),
+  cloudTrend: MONTHS.map((m,i)=>({
+    label:m,
+    azure: [24100,24800,25400,26100,26800,27300,27900,28400,28900,29200,29400,29600][i],
+    aws: [15200,15600,15900,16300,16700,17000,17300,17600,17900,18000,18100,18300][i]
+  })),
+  benchmark: [
+    {cat:'Infraestructura', real:1.2, bench:1.5},
+    {cat:'Aplicaciones', real:1.4, bench:1.6},
+    {cat:'Seguridad', real:0.6, bench:0.9},
+    {cat:'Datos y analítica', real:0.5, bench:0.7},
+    {cat:'Innovación', real:0.4, bench:0.6},
+  ],
+  kpiTable: [
+    {i:'Índice de madurez digital', v:68, m:75, unit:'/100', direction:'higher'},
+    {i:'Adopción de nube (IaaS/PaaS)', v:74, m:85, unit:'%', direction:'higher'},
+    {i:'Automatización de procesos', v:41, m:55, unit:'%', direction:'higher'},
+    {i:'Disponibilidad servicios críticos', v:99.2, m:99.5, unit:'%', direction:'higher'},
+    {i:'Frecuencia de despliegues (deploys/mes)', v:18, m:20, unit:'', direction:'higher'},
+    {i:'Deuda técnica del portafolio', v:23, m:20, unit:'%', direction:'lower'},
+    {i:'Postura de ciberseguridad', v:82, m:80, unit:'/100', direction:'higher'},
+    {i:'Calidad de datos maestros', v:77, m:85, unit:'%', direction:'higher'},
+    {i:'Experiencia digital del usuario (CSAT)', v:4.2, m:4.5, unit:'/5', direction:'higher'},
+    {i:'Gasto TI / ingresos', v:4.1, m:5.0, unit:'%', direction:'lower'},
+  ],
+  azure: [
+    {name:'Cómputo (VMs / App Service)', value:11800},
+    {name:'Bases de datos (Azure SQL)', value:7200},
+    {name:'Almacenamiento', value:4600},
+    {name:'Redes y CDN', value:3100},
+    {name:'Seguridad y monitoreo', value:1900},
+    {name:'Otros servicios PaaS', value:1000},
+  ],
+  aws: [
+    {name:'EC2 (cómputo)', value:7400},
+    {name:'RDS (MySQL / bases de datos)', value:4300},
+    {name:'S3 (almacenamiento)', value:3100},
+    {name:'Redes / CloudFront', value:2100},
+    {name:'Otros (Lambda, monitoreo)', value:1400},
+  ],
+  avail: [
+    {s:'API Gateway institucional', p:'Azure', sla:99.9, real:99.6},
+    {s:'Portal de trámites', p:'Azure', sla:99.5, real:99.8},
+    {s:'Core financiero', p:'On-premise', sla:99.5, real:97.9},
+    {s:'Data Warehouse (Fabric)', p:'Azure', sla:99.0, real:99.3},
+    {s:'Balanceador de carga', p:'AWS', sla:99.9, real:99.95},
+    {s:'CDN / distribución de contenido', p:'AWS', sla:99.9, real:99.92},
+    {s:'VPN corporativa', p:'Azure', sla:99.0, real:98.1},
+    {s:'Correo institucional', p:'AWS', sla:99.5, real:99.7},
+    {s:'Bus de integración', p:'On-premise', sla:99.0, real:93.4},
+  ],
+  sql: [
+    {n:'SQL-PROD-01 (Core Financiero)', used:812, total:1000},
+    {n:'SQL-PROD-02 (SIAG Obligaciones)', used:214, total:500},
+    {n:'SQL-PROD-03 (Portal Trámites)', used:640, total:750},
+    {n:'SQL-DEV-01 (Ambiente pruebas)', used:96, total:250},
+  ],
+  mysql: [
+    {n:'MYSQL-PROD-01 (ASKTrack)', used:38, total:100, connActive:62, connMax:150},
+    {n:'MYSQL-PROD-02 (IndicaTrack)', used:71, total:100, connActive:118, connMax:150},
+    {n:'MYSQL-PROD-03 (Analytics Log)', used:210, total:250, connActive:94, connMax:200},
+  ],
+  gauges: {
+    security:{value:82, max:100, mode:'target', label:'Score compuesto'},
+    cpu:{value:64, max:100, mode:'utilization', label:'Utilización promedio'},
+    mem:{value:71, max:100, mode:'utilization', label:'Utilización promedio'},
+    storage:{value:70, max:100, mode:'utilization', label:'Utilización promedio'},
+  },
+  _manual: {}
+};
+
+let DATA = null;
+
+function loadState(){
+  let saved = null;
+  try{ saved = JSON.parse(localStorage.getItem('simt_data_v1')); }catch(e){ saved = null; }
+  DATA = JSON.parse(JSON.stringify(DEFAULTS));
+  if(saved){
+    Object.keys(DEFAULTS).forEach(k=>{ if(saved[k] !== undefined) DATA[k] = saved[k]; });
+  }
+  if(!DATA._manual) DATA._manual = {};
+}
+function persist(){
+  try{ localStorage.setItem('simt_data_v1', JSON.stringify(DATA)); }catch(e){}
+}
+function resetAllData(){
+  try{ localStorage.removeItem('simt_data_v1'); }catch(e){}
+  loadState();
+  renderAll();
+  closeModal();
+}
+
+/* =========================================================
+   CALCULATION HELPERS
+========================================================= */
+function classifyTarget(value, target, direction){
+  if(direction === 'lower'){
+    if(value <= target) return 'good';
+    if(value <= target*1.15) return 'warning';
+    return 'critical';
+  }
+  if(value >= target) return 'good';
+  if(value >= target*0.9) return 'warning';
+  return 'critical';
+}
+function classifyUtilization(pct){
+  if(pct < 70) return 'good';
+  if(pct < 85) return 'warning';
+  return 'critical';
+}
+function classifyAvailability(real, sla){
+  if(real >= sla) return 'good';
+  if(real >= sla - 1) return 'warning';
+  return 'critical';
+}
+function fmtStat(v, unit){
+  if(unit === '$') return '$' + Math.round(v).toLocaleString();
+  return v + (unit || '');
+}
+function statColor(st){ return st==='good'?'var(--good)': st==='warning'?'var(--warning)':'var(--critical)'; }
+function statusBadge(st){
+  const txt = st==='good'?'Normal': st==='warning'?'Advertencia':'Crítico';
+  return `<span class="badge ${st}"><span class="d"></span>${txt}</span>`;
+}
+function manualTag(key){ return DATA._manual[key] ? '<span class="manual-tag">✏️ Manual</span>' : ''; }
+
+/* =========================================================
+   CHART HELPERS (pure SVG)
+========================================================= */
+function svgEl(id){ return document.getElementById(id); }
+
+function lineChart(id, series, opts={}){
+  const svg = svgEl(id);
+  const W = 640, H = 260, padL = 34, padR = 14, padT = 16, padB = 26;
+  const innerW = W - padL - padR, innerH = H - padT - padB;
+  const n = series[0].data.length;
+  const maxY = opts.maxY || Math.max(...series.flatMap(s=>s.data.map(d=>d.v))) * 1.15;
+  const minY = opts.minY !== undefined ? opts.minY : 0;
+  const x = i => padL + (innerW * i)/(n-1);
+  const y = v => padT + innerH - (innerH * (v-minY))/(maxY-minY);
+  let out = '';
+  for(let g=0; g<=4; g++){
+    const gy = padT + (innerH*g)/4;
+    const val = Math.round(maxY - (maxY-minY)*g/4);
+    out += `<line x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}" stroke="var(--grid)" stroke-width="1"/>`;
+    out += `<text x="${padL-8}" y="${gy+3}" text-anchor="end">${val}</text>`;
+  }
+  const step = Math.ceil(n/8);
+  series[0].data.forEach((d,i)=>{
+    if(i%step===0 || i===n-1) out += `<text x="${x(i)}" y="${H-6}" text-anchor="middle">${d.label}</text>`;
+  });
+  series.forEach(s=>{
+    let pts = s.data.map((d,i)=>`${x(i)},${y(d.v)}`).join(' ');
+    out += `<polyline points="${pts}" fill="none" stroke="${s.color}" stroke-width="2.25" stroke-linejoin="round" stroke-linecap="round"/>`;
+    s.data.forEach((d,i)=>{
+      out += `<circle cx="${x(i)}" cy="${y(d.v)}" r="2.6" fill="${s.color}"><title>${s.name} · ${d.label}: ${d.v}${opts.suffix||''}</title></circle>`;
+    });
+  });
+  svg.innerHTML = out;
+}
+
+function groupedBar(id, categories, series, opts={}){
+  const svg = svgEl(id);
+  const W = 560, H = 240, padL = 34, padR = 10, padT = 14, padB = 34;
+  const innerW = W-padL-padR, innerH = H-padT-padB;
+  const maxY = opts.maxY || Math.max(...series.flatMap(s=>s.data))*1.2;
+  const groupW = innerW/categories.length;
+  const barW = Math.min(26, (groupW-14)/series.length);
+  const y = v => padT + innerH - (innerH*v)/maxY;
+  let out='';
+  for(let g=0; g<=4; g++){
+    const gy = padT + (innerH*g)/4;
+    const val = (maxY - (maxY*g)/4).toFixed(1);
+    out += `<line x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}" stroke="var(--grid)" stroke-width="1"/>`;
+    out += `<text x="${padL-8}" y="${gy+3}" text-anchor="end">${val}${opts.suffix||''}</text>`;
+  }
+  categories.forEach((cat,ci)=>{
+    const gx = padL + groupW*ci + (groupW - series.length*barW)/2;
+    series.forEach((s,si)=>{
+      const v = s.data[ci];
+      const bx = gx + si*barW;
+      const by = y(v);
+      out += `<rect x="${bx}" y="${by}" width="${barW-3}" height="${padT+innerH-by}" rx="3" fill="${s.color}"><title>${s.name} · ${cat}: ${v}${opts.suffix||''}</title></rect>`;
+    });
+    out += `<text x="${gx + (series.length*barW)/2}" y="${H-14}" text-anchor="middle">${cat}</text>`;
+  });
+  svg.innerHTML = out;
+}
+
+function donut(id, segments){
+  const svg = svgEl(id);
+  const cx=110, cy=110, rOuter=92, rInner=56;
+  const total = segments.reduce((a,s)=>a+s.value,0) || 1;
+  let angle = -Math.PI/2, out='';
+  segments.forEach(seg=>{
+    const frac = seg.value/total;
+    const a0 = angle, a1 = angle + frac*2*Math.PI;
+    angle = a1;
+    const large = (a1-a0) > Math.PI ? 1 : 0;
+    const x0o=cx+rOuter*Math.cos(a0), y0o=cy+rOuter*Math.sin(a0);
+    const x1o=cx+rOuter*Math.cos(a1), y1o=cy+rOuter*Math.sin(a1);
+    const x0i=cx+rInner*Math.cos(a1), y0i=cy+rInner*Math.sin(a1);
+    const x1i=cx+rInner*Math.cos(a0), y1i=cy+rInner*Math.sin(a0);
+    const path = `M${x0o},${y0o} A${rOuter},${rOuter} 0 ${large} 1 ${x1o},${y1o} L${x0i},${y0i} A${rInner},${rInner} 0 ${large} 0 ${x1i},${y1i} Z`;
+    out += `<path d="${path}" fill="${seg.color}" stroke="var(--surface-card)" stroke-width="2"><title>${seg.name}: ${Math.round(frac*100)}% ($${seg.value.toLocaleString()})</title></path>`;
+  });
+  out += `<text x="${cx}" y="${cy-4}" text-anchor="middle" style="fill:var(--text-primary); font-size:16px; font-weight:800;">$${Math.round(total/1000)}k</text>`;
+  out += `<text x="${cx}" y="${cy+13}" text-anchor="middle" style="fill:var(--text-muted); font-size:9.5px;">USD / mes</text>`;
+  svg.innerHTML = out;
+}
+
+function radarChart(id, labels, values, color){
+  const svg = svgEl(id);
+  const cx=160, cy=150, R=105, n=labels.length;
+  const angleFor = i => -Math.PI/2 + i*(2*Math.PI/n);
+  let out='';
+  [0.25,0.5,0.75,1].forEach(f=>{
+    let pts=[];
+    for(let i=0;i<n;i++){ const a=angleFor(i); pts.push(`${cx+R*f*Math.cos(a)},${cy+R*f*Math.sin(a)}`); }
+    out += `<polygon points="${pts.join(' ')}" fill="none" stroke="var(--grid)" stroke-width="1"/>`;
+  });
+  for(let i=0;i<n;i++){
+    const a=angleFor(i);
+    out += `<line x1="${cx}" y1="${cy}" x2="${cx+R*Math.cos(a)}" y2="${cy+R*Math.sin(a)}" stroke="var(--grid)" stroke-width="1"/>`;
+    const lx = cx+(R+24)*Math.cos(a), ly = cy+(R+24)*Math.sin(a);
+    out += `<text x="${lx}" y="${ly}" text-anchor="middle" style="font-size:8.5px;">${labels[i]}</text>`;
+  }
+  let poly=[];
+  for(let i=0;i<n;i++){ const a=angleFor(i), f=values[i]/100; poly.push(`${cx+R*f*Math.cos(a)},${cy+R*f*Math.sin(a)}`); }
+  out += `<polygon points="${poly.join(' ')}" fill="${color}" fill-opacity="0.22" stroke="${color}" stroke-width="2"/>`;
+  for(let i=0;i<n;i++){
+    const a=angleFor(i), f=values[i]/100;
+    const px=cx+R*f*Math.cos(a), py=cy+R*f*Math.sin(a);
+    out += `<circle cx="${px}" cy="${py}" r="3" fill="${color}"><title>${labels[i]}: ${values[i]}/100</title></circle>`;
+  }
+  svg.innerHTML = out;
+}
+
+function gaugeChart(id, value, max, opts={}){
+  const svg = svgEl(id);
+  const cx=110, cy=110, r=88;
+  const frac = Math.max(0,Math.min(1,value/max));
+  const startA = Math.PI, endA = Math.PI - frac*Math.PI;
+  const color = opts.color || (frac>0.75?'var(--good)': frac>0.5?'var(--warning)':'var(--critical)');
+  const x0=cx+r*Math.cos(startA), y0=cy+r*Math.sin(startA);
+  const x1=cx+r*Math.cos(endA), y1=cy+r*Math.sin(endA);
+  const large = frac>0.5?1:0;
+  const bgPath = `M${cx-r},${cy} A${r},${r} 0 1 1 ${cx+r},${cy}`;
+  const fgPath = `M${x0},${y0} A${r},${r} 0 ${large} 1 ${x1},${y1}`;
+  let out = `<path d="${bgPath}" fill="none" stroke="var(--grid)" stroke-width="14" stroke-linecap="round"/>`;
+  out += `<path d="${fgPath}" fill="none" stroke="${color}" stroke-width="14" stroke-linecap="round"/>`;
+  out += `<text x="${cx}" y="${cy-6}" text-anchor="middle" style="fill:var(--text-primary); font-size:24px; font-weight:800;">${value}${opts.suffix||''}</text>`;
+  out += `<text x="${cx}" y="${cy+14}" text-anchor="middle" style="fill:var(--text-muted); font-size:10px;">${opts.label||('de '+max)}</text>`;
+  svg.innerHTML = out;
+}
+
+function legendHTML(items){
+  return items.map(i=>`<div class="legend-item"><span class="legend-dot" style="background:${i.color}"></span>${i.name}</div>`).join('');
+}
+const CAT_COLORS = ['var(--s1)','var(--s3)','var(--s4)','var(--s7)','var(--s5)','var(--s2)','var(--s6)','var(--s8)'];
+
+/* =========================================================
+   RENDER FUNCTIONS
+========================================================= */
+function renderKpiStats(){
+  document.getElementById('kpiStats').innerHTML = DATA.kpiStats.map(s=>{
+    const st = classifyTarget(s.value, s.target, s.direction);
+    const diff = Math.abs(s.direction==='higher' ? s.target-s.value : s.value-s.target);
+    const metaTxt = st==='good' ? `Meta alcanzada · objetivo ${fmtStat(s.target,s.unit)}` : `Faltan ${fmtStat(diff,s.unit).replace('$','$')} para la meta (${fmtStat(s.target,s.unit)})`;
+    return `<div class="stat">
+      <div class="top"><span class="lbl">${s.label}</span>
+        <span class="stat-icons">${manualTag(s.key)}<span class="status-dot dot-${st}"></span><span class="edit-ic" onclick="openStatEditor('kpiStats','${s.key}')">✎</span></span>
+      </div>
+      <div class="val">${fmtStat(s.value, s.unit)}</div>
+      <div class="meta">${metaTxt}</div>
+    </div>`;
+  }).join('');
+}
+function renderInfraStats(){
+  document.getElementById('infraStats').innerHTML = DATA.infraStats.map(s=>{
+    const st = classifyTarget(s.value, s.target, s.direction);
+    const diff = Math.abs(s.direction==='higher' ? s.target-s.value : s.value-s.target);
+    const metaTxt = st==='good' ? `Dentro de la meta · objetivo ${fmtStat(s.target,s.unit)}` : `${fmtStat(diff,s.unit)} fuera de la meta (${fmtStat(s.target,s.unit)})`;
+    return `<div class="stat">
+      <div class="top"><span class="lbl">${s.label}</span>
+        <span class="stat-icons">${manualTag(s.key)}<span class="status-dot dot-${st}"></span><span class="edit-ic" onclick="openStatEditor('infraStats','${s.key}')">✎</span></span>
+      </div>
+      <div class="val">${fmtStat(s.value, s.unit)}</div>
+      <div class="meta">${metaTxt}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderRadar(){
+  const labels = DATA.radar.map(r=>r.label);
+  const values = DATA.radar.map(r=>r.value);
+  radarChart('chartRadar', labels, values, 'var(--s1)');
+  const avg = Math.round(values.reduce((a,b)=>a+b,0)/values.length);
+  document.getElementById('radarAvgBadge').innerHTML = `<strong style="color:#fff;">${avg}/100</strong> ${manualTag('radar')}`;
+}
+
+function renderTrend(){
+  const rows = DATA.trend.slice(12-currentPeriod);
+  lineChart('chartTrend', [
+    {name:'Adopción de nube', color:'var(--s1)', data:rows.map(r=>({label:r.label, v:r.nube}))},
+    {name:'Automatización de procesos', color:'var(--s2)', data:rows.map(r=>({label:r.label, v:r.automat}))}
+  ], {maxY:100, suffix:'%'});
+  document.getElementById('legendTrend').innerHTML = legendHTML([
+    {name:'Adopción de nube (%)'+ (DATA._manual.trend?' · ✏️ manual':''), color:'#3987e5'},
+    {name:'Automatización de procesos (%)', color:'#d95926'}
+  ]);
+}
+
+function renderBenchmark(){
+  groupedBar('chartBenchmark', DATA.benchmark.map(b=>b.cat),
+    [
+      {name:'Real', color:'var(--s1)', data:DATA.benchmark.map(b=>b.real)},
+      {name:'Benchmark sector', color:'var(--s7)', data:DATA.benchmark.map(b=>b.bench)}
+    ], {suffix:'%'});
+  document.getElementById('legendBenchmark').innerHTML = legendHTML([
+    {name:'Real (% ingresos)'+ (DATA._manual.benchmark?' · ✏️ manual':''), color:'#3987e5'},
+    {name:'Benchmark sector (% ingresos)', color:'#9085e9'}
+  ]);
+}
+
+function renderKpiTable(){
+  document.getElementById('kpiTableBody').innerHTML = DATA.kpiTable.map(r=>{
+    const st = classifyTarget(r.v, r.m, r.direction);
+    return `<tr>
+      <td><strong>${r.i}</strong></td>
+      <td>${r.v}${r.unit}</td>
+      <td>${r.m}${r.unit}</td>
+      <td style="color:${st==='good'?'var(--good)':'var(--critical)'}">${st==='good'?'▲':'▼'}</td>
+      <td>${statusBadge(st)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderSecurityGauge(){
+  const g = DATA.gauges.security;
+  const st = g.value>=80?'good':g.value>=65?'warning':'critical';
+  gaugeChart('gaugeSecurity', g.value, g.max, {color:statColor(st)});
+}
+function renderResourceGauges(){
+  ['cpu','mem','storage'].forEach(k=>{
+    const g = DATA.gauges[k];
+    const pct = Math.round(g.value/g.max*100);
+    const st = classifyUtilization(pct);
+    gaugeChart(k==='cpu'?'gaugeCPU':k==='mem'?'gaugeMem':'gaugeStorage', pct, 100, {suffix:'%', label:g.label, color:statColor(st)});
+  });
+}
+
+function renderDonuts(){
+  const azureTotal = DATA.azure.reduce((a,s)=>a+s.value,0);
+  const awsTotal = DATA.aws.reduce((a,s)=>a+s.value,0);
+  const azureSeg = DATA.azure.map((s,i)=>({name:s.name, value:s.value, color:`var(--s${(i%8)+1})`}));
+  const awsSeg = DATA.aws.map((s,i)=>({name:s.name, value:s.value, color:`var(--s${(i%8)+1})`}));
+  donut('donutAzure', azureSeg);
+  document.getElementById('legendAzure').innerHTML = legendHTML(azureSeg.map(s=>({name:`${s.name} — ${Math.round(s.value/azureTotal*100)}%`, color:s.color})));
+  donut('donutAWS', awsSeg);
+  document.getElementById('legendAWS').innerHTML = legendHTML(awsSeg.map(s=>({name:`${s.name} — ${Math.round(s.value/awsTotal*100)}%`, color:s.color})));
+}
+
+function renderCloudTrend(){
+  const rows = DATA.cloudTrend.slice(12-currentPeriod);
+  const svg = svgEl('chartCloudTrend');
+  const W=300,H=240,padL=32,padR=8,padT=14,padB=24;
+  const innerW=W-padL-padR, innerH=H-padT-padB;
+  const n=rows.length;
+  const maxY = Math.max(...rows.map(r=>r.azure), ...rows.map(r=>r.aws))*1.15;
+  const x = i => padL+(innerW*i)/(n-1);
+  const y = v => padT+innerH-(innerH*v)/maxY;
+  let out='';
+  for(let g=0; g<=3; g++){
+    const gy=padT+(innerH*g)/3;
+    out += `<line x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}" stroke="var(--grid)" stroke-width="1"/>`;
+    out += `<text x="${padL-6}" y="${gy+3}" text-anchor="end">${Math.round((maxY-(maxY*g)/3)/1000)}k</text>`;
+  }
+  const step = Math.ceil(n/5);
+  rows.forEach((d,i)=>{ if(i%step===0||i===n-1) out += `<text x="${x(i)}" y="${H-6}" text-anchor="middle">${d.label}</text>`; });
+  [{f:'azure',c:'#3987e5',name:'Azure'},{f:'aws',c:'#d95926',name:'AWS'}].forEach(ser=>{
+    let pts = rows.map((d,i)=>`${x(i)},${y(d[ser.f])}`).join(' ');
+    out += `<polyline points="${pts}" fill="none" stroke="${ser.c}" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/>`;
+    rows.forEach((d,i)=> out += `<circle cx="${x(i)}" cy="${y(d[ser.f])}" r="2.4" fill="${ser.c}"><title>${ser.name} · ${d.label}: $${d[ser.f].toLocaleString()}</title></circle>`);
+  });
+  svg.innerHTML = out;
+  document.getElementById('legendCloudTrend').innerHTML = legendHTML([
+    {name:'Azure (USD)'+ (DATA._manual.cloudTrend?' · ✏️ manual':''), color:'#3987e5'},
+    {name:'AWS (USD)', color:'#d95926'}
+  ]);
+}
+
+function renderAvail(){
+  document.getElementById('availTableBody').innerHTML = DATA.avail.map(r=>{
+    const st = classifyAvailability(r.real, r.sla);
+    return `<tr>
+      <td><strong>${r.s}</strong></td>
+      <td>${r.p}</td>
+      <td>${r.sla}%</td>
+      <td><div class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:${r.real}%; background:${statColor(st)};"></div></div><span>${r.real}%</span></div></td>
+      <td>${statusBadge(st)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderSql(){
+  document.getElementById('sqlCount').textContent = DATA.sql.length + ' instancias';
+  document.getElementById('sqlTableBody').innerHTML = DATA.sql.map(r=>{
+    const cap = Math.round(r.used/r.total*100);
+    const st = classifyUtilization(cap);
+    return `<tr>
+      <td><strong>${r.n}</strong></td>
+      <td><div class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:${cap}%; background:${statColor(st)};"></div></div><span>${r.used}/${r.total} GB</span></div></td>
+      <td>${cap}%</td>
+      <td>${statusBadge(st)}</td>
+    </tr>`;
+  }).join('');
+}
+function renderMysql(){
+  document.getElementById('mysqlCount').textContent = DATA.mysql.length + ' instancias';
+  document.getElementById('mysqlTableBody').innerHTML = DATA.mysql.map(r=>{
+    const capStorage = Math.round(r.used/r.total*100);
+    const capConn = Math.round(r.connActive/r.connMax*100);
+    const st = classifyUtilization(Math.max(capStorage, capConn));
+    return `<tr>
+      <td><strong>${r.n}</strong></td>
+      <td><div class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:${capStorage}%; background:${statColor(st)};"></div></div><span>${r.used}/${r.total} GB</span></div></td>
+      <td>${r.connActive}/${r.connMax}</td>
+      <td>${statusBadge(st)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderAll(){
+  renderKpiStats(); renderInfraStats(); renderRadar(); renderTrend(); renderBenchmark();
+  renderKpiTable(); renderSecurityGauge(); renderResourceGauges(); renderDonuts();
+  renderCloudTrend(); renderAvail(); renderSql(); renderMysql();
+}
+
+/* =========================================================
+   NAVIGATION
+========================================================= */
+const sideLinks = document.querySelectorAll('.side-link');
+const pages = document.querySelectorAll('.page');
+const titles = {
+  'page-kpi': ['Indicadores clave de transformación digital','Lectura ejecutiva del avance digital · edite cualquier dato para recalcular'],
+  'page-infra': ['Consumo y disponibilidad de servicios tecnológicos','Costos cloud, disponibilidad y capacidad de bases de datos · edite cualquier dato para recalcular']
+};
+sideLinks.forEach(l => l.addEventListener('click', () => {
+  sideLinks.forEach(x => x.classList.remove('active'));
+  l.classList.add('active');
+  pages.forEach(p => p.classList.remove('active'));
+  document.getElementById(l.dataset.page).classList.add('active');
+  document.getElementById('topTitle').textContent = titles[l.dataset.page][0];
+  document.getElementById('topSub').textContent = titles[l.dataset.page][1];
+  document.getElementById('sidebar').classList.remove('open');
+}));
+document.getElementById('menuBtn').addEventListener('click', () => document.getElementById('sidebar').classList.toggle('open'));
+
+const periodBtns = document.querySelectorAll('.period-btn');
+let currentPeriod = 12;
+periodBtns.forEach(b => b.addEventListener('click', () => {
+  periodBtns.forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  currentPeriod = parseInt(b.dataset.p);
+  document.getElementById('trendPeriodLbl').textContent = currentPeriod;
+  document.getElementById('cloudPeriodLbl').textContent = currentPeriod;
+  renderTrend(); renderCloudTrend();
+}));
+
+/* =========================================================
+   EDITORS (modal)
+========================================================= */
+let editCtx = null; // {type:'stat', group, key} | {type:'table', key} | {type:'gauge', key}
+
+function closeModal(){ document.getElementById('modalOverlay').classList.remove('open'); editCtx = null; }
+
+function openStatEditor(group, key){
+  const s = DATA[group].find(x=>x.key===key);
+  editCtx = {type:'stat', group, key};
+  document.getElementById('modalTitle').textContent = 'Editar indicador';
+  document.getElementById('modalHint').textContent = s.label;
+  document.getElementById('modalBody').innerHTML = `
+    <div class="field-row">
+      <div class="field"><label>Valor actual ${s.unit?('('+s.unit+')'):''}</label><input type="number" step="any" id="f_value" value="${s.value}"></div>
+      <div class="field"><label>Meta / umbral</label><input type="number" step="any" id="f_target" value="${s.target}"></div>
+    </div>
+    <div class="field-note">El estado (normal / advertencia / crítico) y el mensaje de brecha se calculan automáticamente comparando el valor contra la meta, según si ${s.direction==='higher'?'un valor mayor':'un valor menor'} es mejor.</div>
+  `;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function openGaugeEditor(key){
+  const g = DATA.gauges[key];
+  editCtx = {type:'gauge', key};
+  document.getElementById('modalTitle').textContent = 'Editar indicador';
+  document.getElementById('modalHint').textContent = key==='security'?'Postura de ciberseguridad':key==='cpu'?'Utilización de CPU':key==='mem'?'Utilización de memoria':'Utilización de almacenamiento';
+  document.getElementById('modalBody').innerHTML = `
+    <div class="field-row">
+      <div class="field"><label>Valor actual</label><input type="number" step="any" id="f_value" value="${g.value}"></div>
+      <div class="field"><label>Valor máximo / capacidad</label><input type="number" step="any" id="f_target" value="${g.max}"></div>
+    </div>
+    <div class="field-note">${g.mode==='utilization' ? 'El color se calcula según el % de uso: normal < 70%, advertencia 70–85%, crítico > 85%.' : 'El color se calcula según umbrales de madurez: crítico < 65, advertencia 65–79, normal ≥ 80.'}</div>
+  `;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+const TABLE_DEFS = {
+  trend: {title:'Adopción de nube vs. automatización', columns:[
+    {field:'label', label:'Mes', type:'readonly'},
+    {field:'nube', label:'Adopción de nube (%)', type:'number'},
+    {field:'automat', label:'Automatización (%)', type:'number'},
+  ], allowRowOps:false},
+  cloudTrend: {title:'Gasto mensual Azure vs. AWS', columns:[
+    {field:'label', label:'Mes', type:'readonly'},
+    {field:'azure', label:'Azure (USD)', type:'number'},
+    {field:'aws', label:'AWS (USD)', type:'number'},
+  ], allowRowOps:false},
+  radar: {title:'Madurez digital por dimensión', columns:[
+    {field:'label', label:'Dimensión', type:'readonly'},
+    {field:'value', label:'Score (0–100)', type:'number'},
+  ], allowRowOps:false},
+  benchmark: {title:'Gasto TI: real vs. benchmark del sector', columns:[
+    {field:'cat', label:'Categoría', type:'text'},
+    {field:'real', label:'Real (% ingresos)', type:'number'},
+    {field:'bench', label:'Benchmark (% ingresos)', type:'number'},
+  ], allowRowOps:true, blank:{cat:'Nueva categoría', real:0, bench:0}},
+  kpiTable: {title:'Catálogo de indicadores clave', columns:[
+    {field:'i', label:'Indicador', type:'text'},
+    {field:'v', label:'Valor', type:'number'},
+    {field:'m', label:'Meta', type:'number'},
+    {field:'unit', label:'Unidad', type:'text'},
+    {field:'direction', label:'Sentido', type:'select', options:[['higher','Mayor es mejor'],['lower','Menor es mejor']]},
+  ], allowRowOps:true, blank:{i:'Nuevo indicador', v:0, m:0, unit:'%', direction:'higher'}},
+  azure: {title:'Costos Azure por categoría', columns:[
+    {field:'name', label:'Categoría de servicio', type:'text'},
+    {field:'value', label:'Costo mensual (USD)', type:'number'},
+  ], allowRowOps:true, blank:{name:'Nuevo servicio', value:0}},
+  aws: {title:'Costos AWS por categoría', columns:[
+    {field:'name', label:'Categoría de servicio', type:'text'},
+    {field:'value', label:'Costo mensual (USD)', type:'number'},
+  ], allowRowOps:true, blank:{name:'Nuevo servicio', value:0}},
+  avail: {title:'Disponibilidad de servicios', columns:[
+    {field:'s', label:'Servicio', type:'text'},
+    {field:'p', label:'Proveedor', type:'text'},
+    {field:'sla', label:'SLA objetivo (%)', type:'number'},
+    {field:'real', label:'Disponibilidad real (%)', type:'number'},
+  ], allowRowOps:true, blank:{s:'Nuevo servicio', p:'Azure', sla:99.5, real:99.5}},
+  sql: {title:'Instancias SQL Server', columns:[
+    {field:'n', label:'Instancia', type:'text'},
+    {field:'used', label:'Usado (GB)', type:'number'},
+    {field:'total', label:'Asignado (GB)', type:'number'},
+  ], allowRowOps:true, blank:{n:'Nueva instancia', used:0, total:100}},
+  mysql: {title:'Instancias MySQL', columns:[
+    {field:'n', label:'Instancia', type:'text'},
+    {field:'used', label:'Usado (GB)', type:'number'},
+    {field:'total', label:'Asignado (GB)', type:'number'},
+    {field:'connActive', label:'Conexiones activas', type:'number'},
+    {field:'connMax', label:'Conexiones máx.', type:'number'},
+  ], allowRowOps:true, blank:{n:'Nueva instancia', used:0, total:100, connActive:0, connMax:150}},
+};
+const RENDER_FOR_TABLE = {
+  trend: renderTrend, cloudTrend: renderCloudTrend, radar: renderRadar, benchmark: renderBenchmark,
+  kpiTable: renderKpiTable, azure: renderDonuts, aws: renderDonuts, avail: renderAvail, sql: renderSql, mysql: renderMysql,
+};
+
+function openTableEditor(key){
+  const def = TABLE_DEFS[key];
+  editCtx = {type:'table', key};
+  document.getElementById('modalTitle').textContent = def.title;
+  document.getElementById('modalHint').textContent = 'Los indicadores derivados (estado, %, tendencia) se recalculan automáticamente al guardar.';
+  let html = `<div class="editor-table-wrap"><table class="editor-table"><thead><tr>`;
+  def.columns.forEach(c=> html += `<th>${c.label}</th>`);
+  html += def.allowRowOps ? `<th></th>` : '';
+  html += `</tr></thead><tbody id="editorRows">`;
+  DATA[key].forEach(row=>{ html += buildEditorRow(def, row); });
+  html += `</tbody></table></div>`;
+  if(def.allowRowOps) html += `<div class="modal-actions-row"><span class="edit-btn" onclick="addEditorRow('${key}')">+ Agregar fila</span></div>`;
+  document.getElementById('modalBody').innerHTML = html;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function buildEditorRow(def, row){
+  let html = `<tr>`;
+  def.columns.forEach(c=>{
+    if(c.type==='readonly'){
+      html += `<td><input type="hidden" data-field="${c.field}" value="${row[c.field]}">${row[c.field]}</td>`;
+    } else if(c.type==='select'){
+      html += `<td><select data-field="${c.field}">${c.options.map(o=>`<option value="${o[0]}" ${row[c.field]===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select></td>`;
+    } else {
+      html += `<td><input data-field="${c.field}" type="${c.type}" ${c.type==='number'?'step="any"':''} value="${row[c.field]===undefined?'':row[c.field]}"></td>`;
+    }
+  });
+  if(def.allowRowOps) html += `<td><span class="row-del" onclick="this.closest('tr').remove()">✕</span></td>`;
+  html += `</tr>`;
+  return html;
+}
+function addEditorRow(key){
+  const def = TABLE_DEFS[key];
+  document.getElementById('editorRows').insertAdjacentHTML('beforeend', buildEditorRow(def, def.blank));
+}
+
+function saveModal(){
+  if(!editCtx) return;
+  if(editCtx.type==='stat'){
+    const s = DATA[editCtx.group].find(x=>x.key===editCtx.key);
+    s.value = parseFloat(document.getElementById('f_value').value) || 0;
+    s.target = parseFloat(document.getElementById('f_target').value) || 0;
+    DATA._manual[editCtx.key] = true;
+    persist();
+    editCtx.group==='kpiStats' ? renderKpiStats() : renderInfraStats();
+  } else if(editCtx.type==='gauge'){
+    const g = DATA.gauges[editCtx.key];
+    g.value = parseFloat(document.getElementById('f_value').value) || 0;
+    g.max = parseFloat(document.getElementById('f_target').value) || 1;
+    DATA._manual['gauge_'+editCtx.key] = true;
+    persist();
+    editCtx.key==='security' ? renderSecurityGauge() : renderResourceGauges();
+  } else if(editCtx.type==='table'){
+    const def = TABLE_DEFS[editCtx.key];
+    const rows = [...document.querySelectorAll('#editorRows tr')];
+    DATA[editCtx.key] = rows.map(tr=>{
+      const obj = {};
+      def.columns.forEach(c=>{
+        const input = tr.querySelector(`[data-field="${c.field}"]`);
+        obj[c.field] = c.type==='number' ? (parseFloat(input.value)||0) : input.value;
+      });
+      return obj;
+    });
+    DATA._manual[editCtx.key] = true;
+    persist();
+    RENDER_FOR_TABLE[editCtx.key]();
+  }
+  closeModal();
+}
+
+/* =========================================================
+   INIT
+========================================================= */
+loadState();
+renderAll();
+</script>
+
+</body>
+</html>
